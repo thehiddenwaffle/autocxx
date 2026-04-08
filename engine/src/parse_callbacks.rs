@@ -72,7 +72,27 @@ impl CppOriginalName {
 
     /// Work out what to call a Rust-side API given a C++-side name.
     pub(crate) fn to_string_for_rust_name(&self) -> String {
-        self.0.clone()
+        // Only convert regular methods (lowercase-starting). Constructor and type
+        // names start with uppercase and must not be renamed — they feed into the
+        // cxx bridge name tracker and collision logic in ways that break code gen.
+        if self.0.starts_with(|c: char| c.is_uppercase()) {
+            return self.0.clone();
+        }
+        // Convert camelCase to snake_case without an external dependency.
+        let s = &self.0;
+        let mut out = String::with_capacity(s.len() + 4);
+        let chars: Vec<char> = s.chars().collect();
+        for (i, &c) in chars.iter().enumerate() {
+            if c.is_uppercase() && i > 0 {
+                let prev_lower = chars[i - 1].is_lowercase();
+                let next_lower = chars.get(i + 1).map_or(false, |c| c.is_lowercase());
+                if prev_lower || next_lower {
+                    out.push('_');
+                }
+            }
+            out.extend(c.to_lowercase());
+        }
+        out
     }
 
     /// Return the string inside for validation purposes.
@@ -100,10 +120,18 @@ impl CppOriginalName {
     }
 
     pub(crate) fn generate_cxxbridge_name_attribute(&self) -> proc_macro2::TokenStream {
-        let cpp_call_name = &self.to_string_for_rust_name();
+        // Use the original C++ name so the generated C++ wrapper calls the right method.
+        // Only applicable for regular methods (lowercase-starting); constructor overloads
+        // (Pipeline, Camera, etc.) must not get a #[cxx_name] attribute or cxx will try
+        // to call the constructor as a regular method which is invalid C++.
+        let cpp_call_name = &self.0;
         quote!(
             #[cxx_name = #cpp_call_name]
         )
+    }
+
+    pub(crate) fn is_method(&self) -> bool {
+        self.0.chars().next().map(|c| c.is_lowercase()).unwrap_or(false)
     }
 }
 

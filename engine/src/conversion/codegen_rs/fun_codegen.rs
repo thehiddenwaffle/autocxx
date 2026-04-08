@@ -174,6 +174,7 @@ pub(super) fn gen_function(
 
     if let Some(cpp_call_name) = cpp_call_name {
         if cpp_call_name.does_not_match_cxxbridge_name(&cxxbridge_name) && !wrapper_function_needed
+            && cpp_call_name.is_method()
         {
             cpp_name_attr = Attribute::parse_outer
                 .parse2(cpp_call_name.generate_cxxbridge_name_attribute())
