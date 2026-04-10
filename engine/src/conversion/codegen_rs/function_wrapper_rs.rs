@@ -41,7 +41,7 @@ impl TypeConversionPolicy {
                 conversion_requires_unsafe: false,
             },
             RustConversionType::FromStr => RustParamConversion::Param {
-                ty: parse_quote! { impl ToCppString },
+                ty: parse_quote! { impl super::ToCppString },
                 local_variables: Vec::new(),
                 conversion: quote! ( #var .into_cpp() ),
                 conversion_requires_unsafe: false,
