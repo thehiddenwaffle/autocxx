@@ -121,7 +121,12 @@ impl ByValueChecker {
                         None => byvalue_checker.ingest_nonpod_type(name.clone()),
                     }
                 }
-                Api::Enum { .. } | Api::ExternCppType { pod: true, .. } => {
+                Api::Enum { .. }
+                | Api::ExternCppType { pod: true, .. }
+                | Api::ExternCppType {
+                    details: autocxx_parser::ExternCppType { opaque: false, .. },
+                    ..
+                } => {
                     byvalue_checker
                         .results
                         .insert(api.name().clone(), StructDetails::new(PodState::IsPod));
